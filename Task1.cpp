@@ -4,7 +4,7 @@ using namespace std;
 class Driver;
 class IndianParliament;
 class MemberOfParliament;
-class Singleton_WonMP;
+class Commisoner;
 
 static vector<Driver> drivers;
 static vector<MemberOfParliament> members;
@@ -30,6 +30,11 @@ public:
     }
     void showDriverDetails()
     {
+        if (this->name == "")
+        {
+            cout << "Not allocated the driver\n";
+            return;
+        }
         cout << "Name: " << name << "\n"
              << "Age: " << age << "\n"
              << "Salary: " << salary << "\n"
@@ -61,16 +66,18 @@ private:
         Driver d;
         if (type == "prime minister")
         {
-            int mxExp = 0;
+            int mxExp = 0, idx = 0, i = 0;
             for (auto &driver : drivers)
             {
                 if (driver.drivingExperience > mxExp)
                 {
                     mxExp = driver.drivingExperience;
                     d = driver;
+                    idx = i;
                 }
+                i++;
             }
-            d.driving_MP_car = this->name;
+            drivers[idx].driving_MP_car = this->name;
             this->driver = d;
         }
         else if (type == "minister" || type == "member of parliament")
@@ -79,6 +86,7 @@ private:
             {
                 if (driver.driving_MP_car == "NA")
                 {
+                    driver.driving_MP_car = this->name;
                     d = driver;
                     break;
                 }
@@ -109,6 +117,12 @@ private:
     {
         name = "not defined";
         type = "member of parliament";
+        limit = spent = 0;
+    }
+
+    void GivePermission(bool &permission)
+    {
+        permission = ((rand() % 100) & 1);
     }
 
 public:
@@ -120,12 +134,16 @@ public:
             cerr << "Error_code 102: Not a member of parliaments\n";
             exit(1);
         }
-        if (type == "prime minister") limit = 10000000;
-        else if(type == "minister") limit = 1000000;
-        else limit = 100000;
 
-        spent = rand()%10000000;
-        
+        if (type == "prime minister")
+            limit = 10000000;
+        else if (type == "minister")
+            limit = 1000000;
+        else
+            limit = 100000;
+
+        spent = rand() % 10000000;
+
         this->setDriver();
         this->showMP_Details();
 
@@ -143,12 +161,72 @@ public:
         return this->spent > this->limit;
     }
 
-    MemberOfParliament *getConstituency(){
+    MemberOfParliament *getConstituency()
+    {
         return wonMP;
     }
 
-    friend class Singleton_WonMP;
+    string getType()
+    {
+        return this->type;
+    }
+
+    friend class Commisoner;
 };
+
+class Commisoner
+{
+private:
+    string name;
+    MemberOfParliament arrested_MP, PM;
+    bool PM_permission;
+
+public:
+    Commisoner(string name) : name(name), PM_permission(false)
+    {
+        arrested_MP.showMP_Details();
+    }
+    void setArrestedMinister(MemberOfParliament arrested_MP)
+    {
+        if (arrested_MP.getType() == "prime minister")
+        {
+            cout << "Prime minister cannot be arrested\n";
+            return;
+        }
+        else if (arrested_MP.getType() == "minister")
+        {
+            this->getPM_permission();
+            if (PM_permission)
+            {
+                this->arrested_MP = arrested_MP;
+                cout << "\nDetails of arrested minister: \n";
+                arrested_MP.showMP_Details();
+            }
+            else
+            {
+                cout << "Prime minister not allowed can't arrest the minister\n";
+            }
+        }
+        else
+        {
+            this->arrested_MP = arrested_MP;
+            cout << "\nDetails of arrested minister: \n";
+            arrested_MP.showMP_Details();
+        }
+    }
+    void showArrestedMinisterDetails()
+    {
+        arrested_MP.showMP_Details();
+    }
+    void getPM_permission()
+    {
+        PM.GivePermission(PM_permission);
+    }
+    void setPM(MemberOfParliament PM){
+        this->PM = PM;
+    }
+};
+
 int main()
 {
     int N;
@@ -159,12 +237,36 @@ int main()
     {
         drivers.push_back(Driver("Driver " + to_string(i + 1), rand() % 61 + 18, rand() % 50000));
         drivers[i].showDriverDetails();
-
-        if( i == 0 ) members.push_back(MemberOfParliament("Pratham Asrani", "prime minister"));
-        else if (i&1) members.push_back(MemberOfParliament("Member" + to_string(i), "member of parliament"));
-        else members.push_back(MemberOfParliament("Member" + to_string(i), "minister"));
     }
 
-    
+    Commisoner commisoner("Mudit Goel");
+
+    for (int i = 0; i < N; i++)
+    {
+        if (i == 0){
+            members.push_back(MemberOfParliament("Pratham Asrani", "prime minister"));
+            commisoner.setPM(members[i]);
+        }
+        else if (i & 1)
+            members.push_back(MemberOfParliament("Member" + to_string(i), "member of parliament"));
+        else
+            members.push_back(MemberOfParliament("Member" + to_string(i), "minister"));
+    }
+
+    /*
+    int idx = rand()%N;
+    while(members[idx].getType() == "prime minister") idx = rand()%N;
+    commisoner.setArrestedMinister(members[idx]);
+    commisoner.showArrestedMinisterDetails();
+    */
+
+    for (int i = 0; i < N; i++)
+    {
+        if (members[i].exceedsSpendingLimit() == true)
+        {
+            commisoner.setArrestedMinister(members[i]);
+        }
+    }
+
     return 0;
 }
